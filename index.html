@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+    <title>LiveEditor</title>
+    <style>
+
+        /* Smooth transitions for the theme switch */
+        .smooth-transition {
+            transition: background-color 0.2s, color 0.3s;
+        }
+
+        /* Full-height editor container */
+        .editor-container {
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Full-height CodeMirror editor */
+        .CodeMirror {
+            height: 100%;
+        }
+
+        /* Style for the gutter and line numbers in CodeMirror */
+        .cm-s-abcdef .CodeMirror-gutters {
+            background: #1e1e1e !important;
+            border-right: 1px solid #444 !important;
+        }
+
+        .cm-s-abcdef .CodeMirror-linenumber {
+            color: #bbb !important;
+        }
+    </style>
+
+    <!-- CodeMirror CSS for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/abcdef.min.css">
+
+    <!-- JS libraries for zipping files and downloading them -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+
+<body class="smooth-transition h-100 d-flex flex-column">
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-md border border-3 px-2 py-2 m-3 rounded shadow">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold">LiveEditor</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav ms-auto">
+                    <!-- Theme switch buttons -->
+                    <li class="nav-item mx-1">
+                        <div class="d-flex justify-content-center mode-switch mt-1 border rounded border-1">
+                            <button id="dark" class="btn btn-sm btn-default text-secondary"><i class="bi bi-moon"></i></button>
+                            <button id="light" class="btn btn-sm btn-default text-secondary"><i class="bi bi-sun"></i></button>
+                            <button id="system" class="btn btn-sm btn-default text-secondary"><i class="bi bi-display"></i></button>
+                        </div>
+                    </li>
+                    <!-- Editor column toggle buttons -->
+                    <li class="nav-item mx-1">
+                        <div class="d-flex justify-content-center mt-1 border rounded border-1">
+                            <button id="toggle-html" class="btn btn-sm btn-default text-secondary mx-1">Toggle HTML</button>
+                            <button id="toggle-css" class="btn btn-sm btn-default text-secondary mx-1">Toggle CSS</button>
+                            <button id="toggle-js" class="btn btn-sm btn-default text-secondary mx-1">Toggle JS</button>
+                        </div>
+                    </li>
+                    <!-- Download button -->
+                    <li class="nav-item mx-1">
+                        <div class="d-flex justify-content-center mt-1 border rounded border-1">
+                            <button id="download-zip" class="btn btn-sm btn-default text-secondary mx-1">Download Files</button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid flex-grow-1 d-flex flex-column py-2">
+        <div class="border border-3 px-2 py-2 m-1 rounded shadow flex-grow-1 d-flex">
+            <div class="row flex-grow-1 w-100">
+                <!-- Editor Columns (HTML, CSS, JS) -->
+                <div class="col-12 col-md-6 d-flex flex-column">
+                    <div id="html-column" class="d-flex">
+                        <div id="html-code" class="card editor-container border border-3 rounded shadow editor-card"></div>
+                    </div>
+
+                    <div id="css-column" class="d-flex">
+                        <div id="css-code" class="card editor-container border border-3 rounded shadow editor-card"></div>
+                    </div>
+
+                    <div id="js-column" class="d-flex">
+                        <div id="js-code" class="card editor-container border border-3 rounded shadow editor-card"></div>
+                    </div>
+                </div>
+
+                <!-- Output Column -->
+                <div id="output-column" class="col-12 col-md-6 d-flex flex-column">
+                    <div class="card editor-container border border-3 rounded shadow output-card">
+                        <iframe id="preview" class="h-100 w-100"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Bootstrap JS and CodeMirror JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/css/css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script>
+        // Initialize CodeMirror editors for HTML, CSS, and JavaScript
+        window.htmlEditor = CodeMirror(document.getElementById("html-code"), {
+            value: "<!-- Type HTML here -->",
+            mode: "xml",
+            theme: "abcdef",
+            lineNumbers: true
+        });
+    
+        window.cssEditor = CodeMirror(document.getElementById("css-code"), {
+            value: "/* Type CSS here */",
+            mode: "css",
+            theme: "abcdef",
+            lineNumbers: true
+        });
+    
+        window.jsEditor = CodeMirror(document.getElementById("js-code"), {
+            value: "// Type JavaScript here",
+            mode: "javascript",
+            theme: "abcdef",
+            lineNumbers: true
+        });
+    
+        // Function to set theme based on user selection or system preference
+        function setTheme(mode) {
+            if (mode === 'system') {
+                // Check system's theme preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                mode = prefersDark ? 'dark' : 'light'; // Set to system default
+            }
+    
+            localStorage.setItem('bs-theme', mode);
+            document.documentElement.setAttribute('data-bs-theme', mode);
+    
+            const editorTheme = mode === 'dark' ? 'abcdef' : 'default';
+            window.htmlEditor.setOption('theme', editorTheme);
+            window.cssEditor.setOption('theme', editorTheme);
+            window.jsEditor.setOption('theme', editorTheme);
+            updatePreview();
+        }
+    
+        // Initialize theme based on local storage or system preference
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('bs-theme');
+            if (savedTheme) {
+                setTheme(savedTheme);
+            } else {
+                // Default to system theme if no saved preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                setTheme(prefersDark ? 'dark' : 'light');
+            }
+        }
+    
+        // Listen for system theme changes and update if "system" theme is selected
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (localStorage.getItem('bs-theme') === 'system') {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    
+        // Initialize theme on page load
+        initializeTheme();
+    
+        // Theme switching buttons
+        document.getElementById('dark').addEventListener('click', () => setTheme('dark'));
+        document.getElementById('light').addEventListener('click', () => setTheme('light'));
+        document.getElementById('system').addEventListener('click', () => setTheme('system'));
+    
+        // Toggle editor columns (HTML, CSS, JS)
+        document.getElementById('toggle-html').addEventListener('click', () => toggleColumn('html-column'));
+        document.getElementById('toggle-css').addEventListener('click', () => toggleColumn('css-column'));
+        document.getElementById('toggle-js').addEventListener('click', () => toggleColumn('js-column'));
+    
+        function toggleColumn(id) {
+            document.getElementById(id).classList.toggle('d-none');
+            updatePreview();
+            adjustOutputColumn(); // Adjust output column layout after toggle
+        }
+    
+        // Adjust output column layout when editors are toggled
+        function adjustOutputColumn() {
+            const htmlColumn = document.getElementById('html-column');
+            const cssColumn = document.getElementById('css-column');
+            const jsColumn = document.getElementById('js-column');
+            const outputColumn = document.getElementById('output-column');
+    
+            if (htmlColumn.classList.contains('d-none') && cssColumn.classList.contains('d-none') && jsColumn.classList.contains('d-none')) {
+                outputColumn.classList.add('col-12');
+                outputColumn.classList.remove('col-md-6');
+            } else {
+                outputColumn.classList.add('col-md-6');
+                outputColumn.classList.remove('col-12');
+            }
+        }
+    
+        // Update the preview based on editor content
+        function updatePreview() {
+            const html = window.htmlEditor.getValue();
+            const css = `<style>${window.cssEditor.getValue()}</style>`;
+            const js = `<script>${window.jsEditor.getValue()}<\/script>`;
+            const theme = document.documentElement.getAttribute('data-bs-theme');
+            const themeCss = theme === 'dark' ? '<style>body { background-color: #333; color: #fff; }</style>' : '<style>body { background-color: #fff; color: #000; }</style>';
+            document.getElementById('preview').srcdoc = themeCss + html + css + js;
+        }
+    
+        // Adjust layout on window resize
+        window.addEventListener('resize', () => {
+            window.htmlEditor.refresh();
+            window.cssEditor.refresh();
+            window.jsEditor.refresh();
+            updatePreview();
+            adjustOutputColumn();
+        });
+    
+        // Initialize layout and preview
+        window.htmlEditor.refresh();
+        window.cssEditor.refresh();
+        window.jsEditor.refresh();
+        updatePreview();
+    
+        // Update preview when editors change
+        window.htmlEditor.on('change', updatePreview);
+        window.cssEditor.on('change', updatePreview);
+        window.jsEditor.on('change', updatePreview);
+    
+        // Function to download a file
+        function downloadFile(filename, content) {
+            const blob = new Blob([content], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+    
+        // Download the HTML, CSS, JS, and README files as a zip
+        document.getElementById('download-zip').addEventListener('click', () => {
+            const htmlContent = window.htmlEditor.getValue();
+            const cssContent = window.cssEditor.getValue();
+            const jsContent = window.jsEditor.getValue();
+            const readmeContent = `# Project Files\n\nDon't forget to properly import the main.js and style.css into the index.html file.`;
+    
+            const zip = new JSZip();
+            zip.file("index.html", htmlContent);
+            zip.file("style.css", cssContent);
+            zip.file("main.js", jsContent);
+            zip.file("README.txt", readmeContent);
+    
+            zip.generateAsync({ type: "blob" }).then(function(content) {
+                saveAs(content, "project.zip");
+            });
+        });
+    </script>
+    
+</body>
+
+</html>
